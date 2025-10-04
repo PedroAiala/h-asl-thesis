@@ -1,0 +1,12 @@
+torch
+torchvision
+torchaudio
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+jupyterlab
+notebook
+opencv-python
+PyYAMLpip
