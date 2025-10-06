@@ -10,3 +10,4 @@ jupyterlab
 notebook
 opencv-python
 PyYAMLpip
+rootutils

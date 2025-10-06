@@ -1,0 +1,8 @@
+data_processing:
+  target_image_size = [112, 112]
+  sharpness_threshold = 80.0
+
+  detector_model_name: 'buffalo_l'
+  detector_ctx_id: 0
+  detector_det_size: [320, 320]
+
