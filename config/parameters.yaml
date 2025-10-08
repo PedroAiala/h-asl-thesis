@@ -1,8 +1,16 @@
 data_processing:
-  target_image_size = [112, 112]
-  sharpness_threshold = 80.0
+  # Parâmetros para o carregamento do dataset LFW
+  lfw_min_faces_per_person: 50
+  lfw_resize_factor: 0.8
+ 
 
+  # Parâmetros de qualidade da imagem e alinhamento da face
+  target_image_size: [112, 112]
+  sharpness_threshold: 80.0
+
+  # Parâmetros do modelo de detecção e embedding (InsightFace)
   detector_model_name: 'buffalo_l'
   detector_ctx_id: 0
   detector_det_size: [320, 320]
 
+  

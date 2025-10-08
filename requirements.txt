@@ -11,3 +11,7 @@ notebook
 opencv-python
 PyYAMLpip
 rootutils
+insightface
+tqdm
+onnxruntime
+adjustText
