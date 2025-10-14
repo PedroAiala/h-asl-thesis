@@ -11,6 +11,7 @@ CONFIG_PATH = root_path / "config" / "parameters.yaml"
 @dataclass(frozen=True)
 class DataProcessingConfig:
     """Setup of data processing parameters to lfw"""
+    
     lfw_min_faces_per_person: int
     lfw_resize_factor: float
     target_image_size: list[int]
