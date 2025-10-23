@@ -1,0 +1,81 @@
+// Hierarchical Identity Tree
+digraph {
+	nodesep=0.5 ranksep=1
+	2336689920128 [label="20 identidades" fillcolor=lightgray style=filled]
+	2336689903024 [label="8 identidades" fillcolor=lightgray style=filled]
+	2336689920128 -> 2336689903024
+	2337213606448 [label="3 identidades" fillcolor=lightgray style=filled]
+	2336689903024 -> 2337213606448
+	2337213607120 [label="Owen Wilson" fillcolor=lightgreen shape=box style=filled]
+	2337213606448 -> 2337213607120
+	2337213606688 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337213606448 -> 2337213606688
+	2336690747664 [label="Tony Bennett" fillcolor=lightgreen shape=box style=filled]
+	2337213606688 -> 2336690747664
+	2336690748000 [label="Hassan Wirajuda" fillcolor=lightgreen shape=box style=filled]
+	2337213606688 -> 2336690748000
+	2337213606736 [label="5 identidades" fillcolor=lightgray style=filled]
+	2336689903024 -> 2337213606736
+	2336690746320 [label="3 identidades" fillcolor=lightgray style=filled]
+	2337213606736 -> 2336690746320
+	2336690746944 [label="2 identidades" fillcolor=lightgray style=filled]
+	2336690746320 -> 2336690746944
+	2336690746848 [label="Lynn Abraham" fillcolor=lightgreen shape=box style=filled]
+	2336690746944 -> 2336690746848
+	2337416528992 [label="George Galloway" fillcolor=lightgreen shape=box style=filled]
+	2336690746944 -> 2337416528992
+	2336690747616 [label="Sheila Copps" fillcolor=lightgreen shape=box style=filled]
+	2336690746320 -> 2336690747616
+	2336690748144 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337213606736 -> 2336690748144
+	2337416529280 [label="Johnny Unitas" fillcolor=lightgreen shape=box style=filled]
+	2336690748144 -> 2337416529280
+	2337416528800 [label="Inocencio Arias" fillcolor=lightgreen shape=box style=filled]
+	2336690748144 -> 2337416528800
+	2337213606832 [label="12 identidades" fillcolor=lightgray style=filled]
+	2336689920128 -> 2337213606832
+	2337416529376 [label="4 identidades" fillcolor=lightgray style=filled]
+	2337213606832 -> 2337416529376
+	2337416529808 [label="Drew Barrymore" fillcolor=lightgreen shape=box style=filled]
+	2337416529376 -> 2337416529808
+	2337416529664 [label="3 identidades" fillcolor=lightgray style=filled]
+	2337416529376 -> 2337416529664
+	2337416529088 [label="Lynne Cheney" fillcolor=lightgreen shape=box style=filled]
+	2337416529664 -> 2337416529088
+	2337416530096 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337416529664 -> 2337416530096
+	2337416529616 [label="Ben Affleck" fillcolor=lightgreen shape=box style=filled]
+	2337416530096 -> 2337416529616
+	2337416528032 [label="Aitor Gonzalez" fillcolor=lightgreen shape=box style=filled]
+	2337416530096 -> 2337416528032
+	2337416529712 [label="8 identidades" fillcolor=lightgray style=filled]
+	2337213606832 -> 2337416529712
+	2337416529856 [label="4 identidades" fillcolor=lightgray style=filled]
+	2337416529712 -> 2337416529856
+	2337416530672 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337416529856 -> 2337416530672
+	2337416530864 [label="Augusto Roa Bastos" fillcolor=lightgreen shape=box style=filled]
+	2337416530672 -> 2337416530864
+	2337416530912 [label="Scott Wolf" fillcolor=lightgreen shape=box style=filled]
+	2337416530672 -> 2337416530912
+	2337416530960 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337416529856 -> 2337416530960
+	2337416530480 [label="John Allen Muhammad" fillcolor=lightgreen shape=box style=filled]
+	2337416530960 -> 2337416530480
+	2337416531008 [label="Michel Therrien" fillcolor=lightgreen shape=box style=filled]
+	2337416530960 -> 2337416531008
+	2337416530576 [label="4 identidades" fillcolor=lightgray style=filled]
+	2337416529712 -> 2337416530576
+	2337416531200 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337416530576 -> 2337416531200
+	2337416531536 [label="Dennis Kozlowski" fillcolor=lightgreen shape=box style=filled]
+	2337416531200 -> 2337416531536
+	2337416531584 [label="Justine Henin" fillcolor=lightgreen shape=box style=filled]
+	2337416531200 -> 2337416531584
+	2337416531632 [label="2 identidades" fillcolor=lightgray style=filled]
+	2337416530576 -> 2337416531632
+	2337416531392 [label="Michael Bloomberg" fillcolor=lightgreen shape=box style=filled]
+	2337416531632 -> 2337416531392
+	2337416531920 [label="Katherine Harris" fillcolor=lightgreen shape=box style=filled]
+	2337416531632 -> 2337416531920
+}

@@ -1,13 +1,12 @@
-# ARQUIVO: src/tree_builder.py
-# VERSÃO FINAL - DIRETA E CORRETA
-
 import pandas as pd
 import numpy as np
+import random
 import pickle
+import graphviz
 from sklearn.preprocessing import normalize
 
 class Node:
-    """Representa um nó na árvore de identidades."""
+    """Represents a node in the hierarchical binary tree."""
     def __init__(self, identities, centroid):
         self.identities = identities
         self.centroid = centroid
@@ -20,11 +19,26 @@ class Node:
         count = len(self.identities)
         identity_str = self.identities[0] if count == 1 else f"{count} identidades"
         return f"<Node ({leaf_status}) - {identity_str}>"
+    
+    def inspect(self):
+        """Shows details about a given node."""
+           
+        status = "LEAF" if self.is_leaf else "INTERNAL"
+        print(f"--- Inspecionando Nó ---")
+        print(f"Tipo: {status}")
+        print(f"Número de Identidades: {len(self.identities)}")
+        
+        if self.is_leaf:
+            print(f"Identidade(s): {self.identities}")
+        else:
+            print(f"Filho Esquerda (Left): Contém {len(self.left.identities)} identidades.")
+            print(f"Filho Direita (Right): Contém {len(self.right.identities)} identidades.")
+
 
 class TreeBuilder:
-    """Orquestra a construção da árvore binária hierárquica de identidades."""
+    """Orchestrates the construction of a hierarchical binary tree from face embeddings."""
     def __init__(self, embeddings_path, max_leaf_size=1):
-        print("🚀 Inicializando TreeBuilder...")
+        print("Starting TreeBuilder...")
         self.embeddings_path = embeddings_path
         self.max_leaf_size = max_leaf_size
         self.root = None
@@ -32,34 +46,33 @@ class TreeBuilder:
 
     def _load_and_prepare_data(self):
         """
-        Carrega os dados e constrói o DataFrame usando as chaves corretas.
+        Load embeddings from a pickle file and prepare the data for tree construction.
         """
-        print(f"   -> Carregando embeddings de '{self.embeddings_path}'...")
+        print(f"   -> Loading embeddings from '{self.embeddings_path}'...")
         with open(self.embeddings_path, 'rb') as f:
             loaded_data = pickle.load(f)
 
-        # --- CORREÇÃO DEFINITIVA ---
-        # Acessa as chaves 'nomes' e 'embeddings' diretamente, sem adivinhação.
-        print("   -> Construindo DataFrame a partir das chaves 'nomes' e 'embeddings'...")
-        import numpy as np
+        print("   -> Building DataFrame from 'names' and 'embeddings' keys...")
+        
         nomes = loaded_data['nomes']
         embeddings = loaded_data['embeddings']
-        # Garante que cada embedding seja uma lista 1D
+        
         if isinstance(embeddings, np.ndarray):
             embeddings = embeddings.tolist()
         else:
             embeddings = [np.array(e).tolist() for e in embeddings]
+
         df = pd.DataFrame({
             'nome': nomes,
             'embedding': embeddings
         })
-        # --- FIM DA CORREÇÃO ---
-
-        print(f"   -> DataFrame criado com sucesso com {len(df)} registros.")
-        print("   -> Calculando embedding médio por identidade...")
         
-        # Garante que todos os embeddings são listas e têm a mesma dimensão
+
+        print("   -> Calculating mean embeddings for each identity...")
+        
+        
         df = df[df['embedding'].apply(lambda x: isinstance(x, list))].copy()
+        
         if not df.empty:
             first_len = len(df['embedding'].iloc[0])
             df = df[df['embedding'].apply(lambda x: len(x) == first_len)].copy()
@@ -78,7 +91,7 @@ class TreeBuilder:
         
         print(f"   -> Dados preparados. {len(self.all_identities)} identidades únicas encontradas.")
 
-    def _spherical_kmeans(self, X, n_clusters=2, max_iter=100, tol=1e-4):
+    def _spherical_kmeans(self, X, n_clusters=2, max_iter=200, tol=1e-4):
         X_norm = normalize(X, norm='l2', axis=1)
         if X_norm.shape[0] < n_clusters: return np.arange(X_norm.shape[0])
         
@@ -130,15 +143,80 @@ class TreeBuilder:
         node.right = self._build_recursive(identities_right, nivel + 1)
         return node
 
-    def build_tree(self):
-        print("\n🌳 Iniciando a construção da Árvore Hierárquica...")
+    def build_tree(self, qtd_identities=None):
+        print("\n Iniciando a construção da Árvore Hierárquica...")
         if not self.all_identities:
             raise ValueError("Nenhuma identidade válida encontrada para construir a árvore.")
+        if qtd_identities is not None:
+            self.all_identities = random.sample(self.all_identities, qtd_identities)
         self.root = self._build_recursive(self.all_identities, nivel=0)
-        print("✅ Árvore construída com sucesso!")
+        print(" Árvore construída com sucesso!")
 
     def save_tree(self, output_path):
-        print(f"\n💾 Salvando a árvore em '{output_path}'...")
+        print(f"\n Salvando a árvore em '{output_path}'...")
         with open(output_path, 'wb') as f:
             pickle.dump(self.root, f)
         print(f"   -> Árvore salva com sucesso em '{output_path}'.")
+    
+
+    def _add_nodes_edges(self, node, dot, parent_id=None):
+        """
+        Function to add nodes and edges to the Graphviz Digraph.
+        """
+        node_id = str(id(node))
+        
+        if node.is_leaf:
+            label = node.identities[0]
+            dot.node(node_id, label, shape='box', style='filled', fillcolor='lightgreen')
+        else:
+            label = f"{len(node.identities)} identidades"
+            dot.node(node_id, label, style='filled', fillcolor='lightgray')
+            
+        if parent_id:
+            dot.edge(parent_id, node_id)
+            
+        if not node.is_leaf:
+            self._add_nodes_edges(node.left, dot, parent_id=node_id)
+            self._add_nodes_edges(node.right, dot, parent_id=node_id)
+
+    
+    def visualize_tree_as_graph(self, output_filename='tree_visualization'):
+        """
+        Visualizes the tree using Graphviz.
+        """
+        root_node = self.root
+        dot = graphviz.Digraph(comment='Hierarchical Identity Tree', format='png')
+        dot.attr(nodesep='0.5', ranksep='1')
+
+        self._add_nodes_edges(root_node, dot)
+
+        dot.render(output_filename, view=True)
+        print(f"   -> Árvore salva como '{output_filename}.png' e aberta para visualização.")
+
+    
+    def find_identity(self, identity_name):
+        """
+        Searches for an identity in the tree and returns the path to the leaf node.
+        """
+        path = ""
+        current_node = self.root
+        
+        while current_node and not current_node.is_leaf:
+            left_identities = set(current_node.left.identities)
+
+            if identity_name in left_identities:
+                path += "L"
+                current_node = current_node.left
+            else:
+                path += "R"
+                current_node = current_node.right
+        
+        if current_node and identity_name in current_node.identities:
+            print(path)
+        else:
+            print("Não encontrado")
+    
+
+
+            
+
