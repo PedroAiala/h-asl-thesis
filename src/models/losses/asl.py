@@ -1,76 +1,83 @@
-import random
 import torch
-import time
+import torch.nn as nn
+import torch.nn.functional as F
 
-
-class AxialSpheresLoss(torch.nn.Module):
-    def __init__(self, num_classes:int=2, alpha:float=10., beta:float=.1, gamma:float=.01, reduction:str='mean'):
+class AxialSpheresLoss(nn.Module):
+    """
+    Axial Sphere Loss (ASL) Implementation for H-ASL.
+    
+    Combines the stability of the Paper's Eq. 4 (Log-Sum-Exp) with the 
+    effective training strategy from the experiments (Magnitude penalty only on Unknowns).
+    """
+    def __init__(self, num_classes:int=2, alpha:float=10.0, beta:float=0.1, gamma:float=0.1, reduction:str='mean'):
         super(AxialSpheresLoss, self).__init__()
         self.num_classes = num_classes
         self.alpha = alpha
         self.beta  = beta
-        self.gamma = gamma
+        self.gamma = gamma 
         self.reduction = reduction
 
-        self.pos_anchors = torch.eye(self.num_classes) * self.alpha
+        # Buffers: Garante que os centros (âncoras) sejam salvos com o modelo e movidos p/ GPU
+        # Cria matriz identidade multiplicada por alpha: [[10, 0], [0, 10]]
+        self.register_buffer('pos_anchors', torch.eye(self.num_classes) * self.alpha)
 
     @classmethod
     def logit2distance(cls, logits, centres, p=2):
+        """Calcula distância Euclidiana (L2) entre logits e centros."""
+        # logits: (B, Dim) -> (B, 1, Dim)
+        # centres: (C, Dim)
+        # Result: (B, C) - Distância de cada amostra para cada centro
         centres = centres.to(logits.device)
         distances = torch.norm(logits.unsqueeze(1) - centres, p=p, dim=2)
         return distances
 
-    @classmethod
-    def rejectScores(cls, distances):
-        return distances * (1 - torch.nn.functional.softmin(distances, dim=1))
-
-    @classmethod
-    def acceptScores(cls, logits, centres, p=2):
-        centres = centres.to(logits.device)
-        distances = torch.norm(logits.unsqueeze(dim=1) - centres, p=p, dim=2)
-        rejections = distances * (1 - torch.nn.functional.softmin(distances, dim=1))
-        acceptance = torch.max(rejections) - rejections
-        return acceptance * torch.norm(logits, p=p, dim=1).view(-1, 1)
-
     def forward(self, logits, targets):
-        # get boolean target tensor (true/false)
-        pos_indexes = (targets >= 0)
-        neg_indexes = (targets  < 0)
-        # initialize intra and inter-distance tensors
-        intra_distances = torch.zeros_like(targets[pos_indexes]).float()
-        inter_distances = torch.zeros_like(targets[pos_indexes]).float()
-        # compute logit distance to positive anchor
-        cross_distances = self.logit2distance(logits[pos_indexes], centres=self.pos_anchors)
-        # store intra-class distance (to be minimized)
-        intra_distances = cross_distances.gather(dim=1, index=targets[pos_indexes].view(-1, 1).long())
-        # store inter-class distance (to be maximized)
-        inter_distances = torch.exp(intra_distances - cross_distances).sum(dim=1).log()
-        # compute feature magnitude root
-        outer_magnitude = logits[neg_indexes].norm(p=2, dim=1) if sum(neg_indexes) else torch.tensor([0.]).to(logits.device)
-        # return batch loss
-        if   self.reduction == 'mean':
-            return self.beta * intra_distances.mean() + inter_distances.mean() + self.gamma * outer_magnitude.mean()
-        elif self.reduction ==  'sum':
-            return self.beta * intra_distances.sum() + inter_distances.sum() + self.gamma * outer_magnitude.sum()
-        else:
-            return (intra_distances, inter_distances, outer_magnitude)
+        """
+        logits: (Batch, 2) - Saída da rede (Feature Space)
+        targets: (Batch,) - Labels (0 ou 1 para Known, -1 para Unknown/Background)
+        """
+        # Máscaras booleanas para separar fluxo de dados
+        pos_indexes = (targets >= 0) # Known (Galeria)
+        neg_indexes = (targets < 0)  # Unknown (Background)
+        
+        loss = torch.tensor(0.0, device=logits.device)
+        
+        # --- PARTE 1: CLASSIFICAÇÃO (Known / Galeria) ---
+        if pos_indexes.sum() > 0:
+            k_logits = logits[pos_indexes]
+            k_targets = targets[pos_indexes]
 
+            # 1. Distância de todas as amostras para todos os centros (0 e 1)
+            # Shape: (N_known, 2)
+            all_dists = self.logit2distance(k_logits, self.pos_anchors)
+            
+            # 2. Intra-Class Distance (Eq. 3 do Paper)
+            # Pega apenas a distância para a classe CORRETA (Target)
+            intra_distances = all_dists.gather(dim=1, index=k_targets.view(-1, 1).long())
+            
+            # 3. Inter-Class Loss (Eq. 4 do Paper - LogSumExp)
+            # Maximiza a diferença entre (Distância Certa) e (Distância Errada)
+            # Math: log(sum(exp(intra - all)))
+            # Isso é equivalente a Softplus(intra - inter), muito mais estável que exp(intra - inter)
+            diff = intra_distances - all_dists
+            inter_loss = torch.log(torch.exp(diff).sum(dim=1))
+            
+            if self.reduction == 'mean':
+                loss += self.beta * intra_distances.mean() + inter_loss.mean()
+            else:
+                loss += self.beta * intra_distances.sum() + inter_loss.sum()
 
-torch.manual_seed(0)
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        # --- PARTE 2: REJEIÇÃO (Unknown / Background) ---
+        # Notebook Strategy: Aplicar magnitude apenas aqui.
+        if neg_indexes.sum() > 0:
+            uk_logits = logits[neg_indexes]
+            
+            # Força magnitude a ir para zero (Origem)
+            outer_magnitude = torch.norm(uk_logits, p=2, dim=1)
+            
+            if self.reduction == 'mean':
+                loss += self.gamma * outer_magnitude.mean()
+            else:
+                loss += self.gamma * outer_magnitude.sum()
 
-num_classes, num_samples, batch_size = 20, 50, 10
-
-values = torch.randn(num_samples, num_classes, requires_grad=True).to(device)
-labels = torch.randint(num_classes * 2, (num_samples,), dtype=torch.int64).to(device) - num_classes
-print(device, values.shape, labels.shape)
-
-b_values = values[:batch_size]
-b_labels = labels[:batch_size]
-print(b_labels)
-
-
-criterion = AxialSpheresLoss(num_classes=num_classes, alpha=10., beta=.1, reduction='mean')
-loss_score = criterion(b_values, b_labels)
-loss_score.backward()
-print('ASL:', loss_score)
+        return loss
